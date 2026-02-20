@@ -101,6 +101,10 @@ class AuditLog(BaseModel):
 class ContactAdd(BaseModel):
     contact_id: str
 
+class DeleteAccountConfirm(BaseModel):
+    password: str
+    confirmation_text: str
+
 # Helper functions
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -222,6 +226,53 @@ async def get_user(user_id: str, current_user: User = Depends(get_current_user))
         user['created_at'] = datetime.fromisoformat(user['created_at'])
     
     return User(**user)
+
+@api_router.delete("/users/me")
+async def delete_account(delete_data: DeleteAccountConfirm, current_user: User = Depends(get_current_user)):
+    """
+    Delete user account and all associated data.
+    Requires password confirmation and typing 'DELETE' for safety.
+    """
+    # Verify password
+    user = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not user or not verify_password(delete_data.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Verify confirmation text
+    if delete_data.confirmation_text != "DELETE":
+        raise HTTPException(status_code=400, detail="Confirmation text must be 'DELETE'")
+    
+    # Delete all user data
+    try:
+        # 1. Delete all messages sent by user
+        await db.messages.delete_many({"sender_id": current_user.id})
+        
+        # 2. Delete all messages received by user
+        await db.messages.delete_many({"receiver_id": current_user.id})
+        
+        # 3. Delete user's contacts
+        await db.contacts.delete_many({"user_id": current_user.id})
+        
+        # 4. Delete user from other users' contact lists
+        await db.contacts.delete_many({"contact_id": current_user.id})
+        
+        # 5. Delete audit logs
+        await db.audit_logs.delete_many({"user_id": current_user.id})
+        
+        # 6. Finally, delete the user account
+        await db.users.delete_one({"id": current_user.id})
+        
+        # Log the deletion event
+        logging.info(f"User account deleted: {current_user.id} ({current_user.email})")
+        
+        return {
+            "message": "Account successfully deleted",
+            "deleted_user_id": current_user.id,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Error deleting account: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account")
 
 # Message routes
 @api_router.post("/messages", response_model=Message)
