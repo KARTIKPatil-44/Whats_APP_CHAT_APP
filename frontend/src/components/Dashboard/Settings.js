@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { Button } from '../ui/button';
@@ -18,10 +18,10 @@ import {
 } from '../ui/alert-dialog';
 import { 
   ArrowLeft, Trash2, AlertTriangle, ShieldCheck, User, Mail, Key,
-  Cloud, Download, Upload, Lock
+  Cloud, Download, Upload, Lock, Loader2, CheckCircle, XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { backupManager } from '../../utils/backup-simple';
+import { googleDriveBackup } from '../../utils/google-drive-backup';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -38,37 +38,13 @@ const Settings = ({ onBack }) => {
   const [confirmBackupPassword, setConfirmBackupPassword] = useState('');
   const [isCreatingBackup, setIsCreatingBackup] = useState(false);
   const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [isLoadingBackups, setIsLoadingBackups] = useState(false);
   const [backupList, setBackupList] = useState([]);
   const [restorePassword, setRestorePassword] = useState('');
   const [selectedBackup, setSelectedBackup] = useState(null);
   const [showBackupDialog, setShowBackupDialog] = useState(false);
   const [showRestoreDialog, setShowRestoreDialog] = useState(false);
-
-  useEffect(() => {
-    loadGoogleAPI();
-  }, []);
-
-  const loadGoogleAPI = () => {
-    // Check if script already loaded
-    if (window.google && window.google.accounts) {
-      console.log('Google Identity Services already loaded');
-      return;
-    }
-
-    // Load Google Identity Services (new OAuth library)
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      console.log('Google Identity Services loaded successfully');
-    };
-    script.onerror = () => {
-      console.error('Failed to load Google Identity Services');
-      toast.error('Failed to load Google Drive integration');
-    };
-    document.head.appendChild(script);
-  };
+  const [backupProgress, setBackupProgress] = useState('');
 
   const handleCreateBackup = async () => {
     if (!backupPassword || backupPassword.length < 12) {
@@ -82,38 +58,57 @@ const Settings = ({ onBack }) => {
     }
 
     setIsCreatingBackup(true);
+    setBackupProgress('Starting backup...');
 
     try {
-      const result = await backupManager.createBackup(backupPassword, user.id);
+      const result = await googleDriveBackup.createBackup(
+        backupPassword, 
+        user.id,
+        (progress) => setBackupProgress(progress)
+      );
       
       toast.success('Backup created successfully!', {
         description: `File: ${result.name}`,
-        icon: <Cloud className="w-4 h-4" />
+        icon: <CheckCircle className="w-4 h-4 text-green-500" />
       });
       
       setShowBackupDialog(false);
       setBackupPassword('');
       setConfirmBackupPassword('');
+      setBackupProgress('');
     } catch (error) {
       console.error('Backup failed:', error);
       toast.error('Backup failed', {
-        description: error.message || 'Please try again'
+        description: error.message || 'Please check your Google account permissions and try again',
+        icon: <XCircle className="w-4 h-4" />
       });
     } finally {
       setIsCreatingBackup(false);
+      setBackupProgress('');
     }
   };
 
   const handleListBackups = async () => {
+    setIsLoadingBackups(true);
+    setShowRestoreDialog(true);
+    
     try {
-      const backups = await backupManager.listBackups();
+      const backups = await googleDriveBackup.listBackups();
       setBackupList(backups);
-      setShowRestoreDialog(true);
+      
+      if (backups.length === 0) {
+        toast.info('No backups found', {
+          description: 'Create your first backup to enable restore'
+        });
+      }
     } catch (error) {
       console.error('Failed to list backups:', error);
       toast.error('Failed to load backups', {
-        description: error.message
+        description: error.message || 'Please connect to Google Drive first'
       });
+      setShowRestoreDialog(false);
+    } finally {
+      setIsLoadingBackups(false);
     }
   };
 
@@ -124,24 +119,27 @@ const Settings = ({ onBack }) => {
     }
 
     setIsRestoringBackup(true);
+    setBackupProgress('Starting restore...');
 
     try {
-      const result = await backupManager.restoreBackup(
+      const result = await googleDriveBackup.restoreBackup(
         selectedBackup.id,
         restorePassword,
-        user.id
+        user.id,
+        (progress) => setBackupProgress(progress)
       );
       
       toast.success('Backup restored successfully!', {
-        description: `Restored ${result.messageCount} messages from ${result.contactCount} contacts`,
-        icon: <Download className="w-4 h-4" />
+        description: `Restored ${result.messageCount} messages and ${result.contactCount} contacts`,
+        icon: <CheckCircle className="w-4 h-4 text-green-500" />
       });
       
       setShowRestoreDialog(false);
       setRestorePassword('');
       setSelectedBackup(null);
+      setBackupProgress('');
       
-      // Reload the page to show restored data
+      // Reload to show restored data
       setTimeout(() => {
         window.location.reload();
       }, 2000);
@@ -152,6 +150,7 @@ const Settings = ({ onBack }) => {
       });
     } finally {
       setIsRestoringBackup(false);
+      setBackupProgress('');
     }
   };
 
@@ -194,8 +193,22 @@ const Settings = ({ onBack }) => {
     }
   };
 
+  const formatFileSize = (bytes) => {
+    if (!bytes) return 'N/A';
+    const kb = bytes / 1024;
+    return kb > 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(2)} KB`;
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      return new Date(dateString).toLocaleString();
+    } catch {
+      return dateString;
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-background" data-testid="settings-page">
+    <div className="flex flex-col h-full bg-background" data-testid="settings-page">
       {/* Header */}
       <div className="p-4 border-b border-border">
         <div className="flex items-center gap-3">
@@ -278,12 +291,12 @@ const Settings = ({ onBack }) => {
             </div>
           </div>
 
-          {/* Encrypted Backup */}
+          {/* Google Drive Backup */}
           <div className="bg-card border border-primary/20 rounded-lg p-6">
             <div className="flex items-center gap-2 mb-4">
               <Cloud className="w-5 h-5 text-primary" />
               <h3 className="text-lg font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                Encrypted Backup
+                Google Drive Backup
               </h3>
             </div>
             
@@ -292,6 +305,7 @@ const Settings = ({ onBack }) => {
             </p>
 
             <div className="space-y-3">
+              {/* Create Backup Button */}
               <AlertDialog open={showBackupDialog} onOpenChange={setShowBackupDialog}>
                 <AlertDialogTrigger asChild>
                   <Button className="w-full" data-testid="create-backup-button">
@@ -307,9 +321,9 @@ const Settings = ({ onBack }) => {
                     </AlertDialogTitle>
                     <AlertDialogDescription className="space-y-4 pt-4">
                       <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
-                        <strong className="text-primary">🔒 Zero-Knowledge Encryption</strong>
+                        <strong className="text-primary">Zero-Knowledge Encryption</strong>
                         <p className="text-muted-foreground mt-1">
-                          Your backup password is used to encrypt your data. We never see this password or your decryption key.
+                          Your backup password encrypts your data locally before uploading. We never see your password or decryption key.
                         </p>
                       </div>
 
@@ -323,6 +337,7 @@ const Settings = ({ onBack }) => {
                             value={backupPassword}
                             onChange={(e) => setBackupPassword(e.target.value)}
                             className="mt-1"
+                            disabled={isCreatingBackup}
                             data-testid="backup-password-input"
                           />
                         </div>
@@ -336,13 +351,21 @@ const Settings = ({ onBack }) => {
                             value={confirmBackupPassword}
                             onChange={(e) => setConfirmBackupPassword(e.target.value)}
                             className="mt-1"
+                            disabled={isCreatingBackup}
                             data-testid="confirm-backup-password-input"
                           />
                         </div>
 
                         <div className="text-xs text-destructive">
-                          ⚠️ Remember this password! If you lose it, your backup cannot be recovered.
+                          Remember this password! If you lose it, your backup cannot be recovered.
                         </div>
+
+                        {backupProgress && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>{backupProgress}</span>
+                          </div>
+                        )}
                       </div>
                     </AlertDialogDescription>
                   </AlertDialogHeader>
@@ -351,7 +374,9 @@ const Settings = ({ onBack }) => {
                       onClick={() => {
                         setBackupPassword('');
                         setConfirmBackupPassword('');
+                        setBackupProgress('');
                       }}
+                      disabled={isCreatingBackup}
                       data-testid="cancel-backup-button"
                     >
                       Cancel
@@ -361,20 +386,38 @@ const Settings = ({ onBack }) => {
                       disabled={isCreatingBackup || backupPassword.length < 12 || backupPassword !== confirmBackupPassword}
                       data-testid="confirm-backup-button"
                     >
-                      {isCreatingBackup ? 'Creating Backup...' : 'Create Backup'}
+                      {isCreatingBackup ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creating...
+                        </>
+                      ) : (
+                        'Create Backup'
+                      )}
                     </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
 
+              {/* Restore Backup Button */}
               <Button
                 variant="outline"
                 className="w-full"
                 onClick={handleListBackups}
+                disabled={isLoadingBackups}
                 data-testid="restore-backup-button"
               >
-                <Download className="w-4 h-4 mr-2" />
-                Restore from Backup
+                {isLoadingBackups ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Restore from Backup
+                  </>
+                )}
               </Button>
             </div>
 
@@ -382,16 +425,24 @@ const Settings = ({ onBack }) => {
             <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
               <AlertDialogContent className="bg-card max-w-2xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Restore from Backup</AlertDialogTitle>
+                  <AlertDialogTitle className="flex items-center gap-2">
+                    <Download className="w-5 h-5 text-primary" />
+                    Restore from Backup
+                  </AlertDialogTitle>
                   <AlertDialogDescription className="space-y-4 pt-4">
-                    {backupList.length === 0 ? (
+                    {isLoadingBackups ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                      </div>
+                    ) : backupList.length === 0 ? (
                       <div className="text-center py-8 text-muted-foreground">
                         <Cloud className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                        <p>No backups found</p>
+                        <p className="font-medium">No backups found</p>
+                        <p className="text-sm">Create your first backup to enable restore</p>
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <Label>Select Backup:</Label>
+                        <Label>Select a backup to restore:</Label>
                         <div className="max-h-48 overflow-y-auto space-y-2">
                           {backupList.map((backup) => (
                             <div
@@ -405,13 +456,13 @@ const Settings = ({ onBack }) => {
                             >
                               <div className="flex justify-between items-center">
                                 <div>
-                                  <p className="text-sm font-medium">{backup.name}</p>
+                                  <p className="text-sm font-medium text-foreground">{backup.name}</p>
                                   <p className="text-xs text-muted-foreground">
-                                    {new Date(backup.createdTime).toLocaleString()}
+                                    {formatDate(backup.createdTime)}
                                   </p>
                                 </div>
                                 <span className="text-xs text-muted-foreground">
-                                  {(backup.size / 1024).toFixed(2)} KB
+                                  {formatFileSize(backup.size)}
                                 </span>
                               </div>
                             </div>
@@ -419,7 +470,7 @@ const Settings = ({ onBack }) => {
                         </div>
 
                         {selectedBackup && (
-                          <div>
+                          <div className="pt-3 border-t border-border">
                             <Label htmlFor="restore-password">Enter Backup Password</Label>
                             <Input
                               id="restore-password"
@@ -428,8 +479,16 @@ const Settings = ({ onBack }) => {
                               value={restorePassword}
                               onChange={(e) => setRestorePassword(e.target.value)}
                               className="mt-1"
+                              disabled={isRestoringBackup}
                               data-testid="restore-password-input"
                             />
+                          </div>
+                        )}
+
+                        {backupProgress && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted p-3 rounded-lg">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            <span>{backupProgress}</span>
                           </div>
                         )}
                       </div>
@@ -437,10 +496,14 @@ const Settings = ({ onBack }) => {
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel onClick={() => {
-                    setRestorePassword('');
-                    setSelectedBackup(null);
-                  }}>
+                  <AlertDialogCancel 
+                    onClick={() => {
+                      setRestorePassword('');
+                      setSelectedBackup(null);
+                      setBackupProgress('');
+                    }}
+                    disabled={isRestoringBackup}
+                  >
                     Cancel
                   </AlertDialogCancel>
                   {backupList.length > 0 && (
@@ -449,7 +512,14 @@ const Settings = ({ onBack }) => {
                       disabled={isRestoringBackup || !selectedBackup || !restorePassword}
                       data-testid="confirm-restore-button"
                     >
-                      {isRestoringBackup ? 'Restoring...' : 'Restore Backup'}
+                      {isRestoringBackup ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Restoring...
+                        </>
+                      ) : (
+                        'Restore Backup'
+                      )}
                     </Button>
                   )}
                 </AlertDialogFooter>
