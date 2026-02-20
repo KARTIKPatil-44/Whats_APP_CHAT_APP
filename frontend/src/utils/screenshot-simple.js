@@ -161,8 +161,8 @@ class SimpleScreenshotDetector {
   }
 
   blurContent() {
-    const protected = document.querySelectorAll('[data-protected="true"]');
-    protected.forEach(el => {
+    const protectedElements = document.querySelectorAll('[data-protected="true"]');
+    protectedElements.forEach(el => {
       el.style.filter = 'blur(10px)';
       el.style.transition = 'filter 0.2s ease';
       
@@ -171,8 +171,8 @@ class SimpleScreenshotDetector {
       }, 2000);
     });
     
-    if (protected.length > 0) {
-      console.log(`🌀 Blurred ${protected.length} protected elements`);
+    if (protectedElements.length > 0) {
+      console.log(`🌀 Blurred ${protectedElements.length} protected elements`);
     }
   }
 }
