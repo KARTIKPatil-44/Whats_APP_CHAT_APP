@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import axios from 'axios';
 import { Button } from '../ui/button';
@@ -16,8 +16,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '../ui/alert-dialog';
-import { ArrowLeft, Trash2, AlertTriangle, ShieldCheck, User, Mail, Key } from 'lucide-react';
+import { 
+  ArrowLeft, Trash2, AlertTriangle, ShieldCheck, User, Mail, Key,
+  Cloud, Download, Upload, Lock
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { backupManager } from '../../utils/backup';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -28,6 +32,119 @@ const Settings = ({ onBack }) => {
   const [confirmationText, setConfirmationText] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  
+  // Backup state
+  const [backupPassword, setBackupPassword] = useState('');
+  const [confirmBackupPassword, setConfirmBackupPassword] = useState('');
+  const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [backupList, setBackupList] = useState([]);
+  const [restorePassword, setRestorePassword] = useState('');
+  const [selectedBackup, setSelectedBackup] = useState(null);
+  const [showBackupDialog, setShowBackupDialog] = useState(false);
+  const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+
+  useEffect(() => {
+    loadGoogleAPI();
+  }, []);
+
+  const loadGoogleAPI = () => {
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.onload = () => {
+      console.log('Google API loaded');
+    };
+    document.body.appendChild(script);
+  };
+
+  const handleCreateBackup = async () => {
+    if (!backupPassword || backupPassword.length < 12) {
+      toast.error('Backup password must be at least 12 characters');
+      return;
+    }
+
+    if (backupPassword !== confirmBackupPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+
+    setIsCreatingBackup(true);
+
+    try {
+      await backupManager.initGoogleDrive();
+      await backupManager.authenticateGoogle();
+      
+      const result = await backupManager.createBackup(backupPassword, user.id);
+      
+      toast.success('Backup created successfully!', {
+        description: `Encrypted backup uploaded to Google Drive`,
+        icon: <Cloud className="w-4 h-4" />
+      });
+      
+      setShowBackupDialog(false);
+      setBackupPassword('');
+      setConfirmBackupPassword('');
+    } catch (error) {
+      console.error('Backup failed:', error);
+      toast.error('Backup failed', {
+        description: error.message || 'Please try again'
+      });
+    } finally {
+      setIsCreatingBackup(false);
+    }
+  };
+
+  const handleListBackups = async () => {
+    try {
+      await backupManager.initGoogleDrive();
+      await backupManager.authenticateGoogle();
+      
+      const backups = await backupManager.listBackups();
+      setBackupList(backups);
+      setShowRestoreDialog(true);
+    } catch (error) {
+      console.error('Failed to list backups:', error);
+      toast.error('Failed to load backups');
+    }
+  };
+
+  const handleRestoreBackup = async () => {
+    if (!selectedBackup || !restorePassword) {
+      toast.error('Please select a backup and enter password');
+      return;
+    }
+
+    setIsRestoringBackup(true);
+
+    try {
+      const result = await backupManager.restoreBackup(
+        selectedBackup.id,
+        restorePassword,
+        user.id
+      );
+      
+      toast.success('Backup restored successfully!', {
+        description: `Restored ${result.messageCount} messages from ${result.contactCount} contacts`,
+        icon: <Download className="w-4 h-4" />
+      });
+      
+      setShowRestoreDialog(false);
+      setRestorePassword('');
+      setSelectedBackup(null);
+      
+      // Reload the page to show restored data
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    } catch (error) {
+      console.error('Restore failed:', error);
+      toast.error('Restore failed', {
+        description: error.message || 'Invalid password or corrupted backup'
+      });
+    } finally {
+      setIsRestoringBackup(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     if (!password || confirmationText !== 'DELETE') {
@@ -55,7 +172,6 @@ const Settings = ({ onBack }) => {
           icon: <Trash2 className="w-4 h-4" />
         });
 
-        // Wait a moment then logout
         setTimeout(() => {
           logout();
         }, 2000);
@@ -151,6 +267,185 @@ const Settings = ({ onBack }) => {
                 <span className="text-xs font-medium text-primary">Generated</span>
               </div>
             </div>
+          </div>
+
+          {/* Encrypted Backup */}
+          <div className="bg-card border border-primary/20 rounded-lg p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Cloud className="w-5 h-5 text-primary" />
+              <h3 className="text-lg font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                Encrypted Backup
+              </h3>
+            </div>
+            
+            <p className="text-sm text-muted-foreground mb-4">
+              Create encrypted backups of your messages to Google Drive. Your data is encrypted with a password you choose - we never have access to your backup key.
+            </p>
+
+            <div className="space-y-3">
+              <AlertDialog open={showBackupDialog} onOpenChange={setShowBackupDialog}>
+                <AlertDialogTrigger asChild>
+                  <Button className="w-full" data-testid="create-backup-button">
+                    <Upload className="w-4 h-4 mr-2" />
+                    Create Encrypted Backup
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="bg-card">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-primary" />
+                      Create Encrypted Backup
+                    </AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-4 pt-4">
+                      <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+                        <strong className="text-primary">🔒 Zero-Knowledge Encryption</strong>
+                        <p className="text-muted-foreground mt-1">
+                          Your backup password is used to encrypt your data. We never see this password or your decryption key.
+                        </p>
+                      </div>
+
+                      <div className="space-y-3">
+                        <div>
+                          <Label htmlFor="backup-password">Backup Password (min 12 characters)</Label>
+                          <Input
+                            id="backup-password"
+                            type="password"
+                            placeholder="Enter strong password"
+                            value={backupPassword}
+                            onChange={(e) => setBackupPassword(e.target.value)}
+                            className="mt-1"
+                            data-testid="backup-password-input"
+                          />
+                        </div>
+
+                        <div>
+                          <Label htmlFor="confirm-backup-password">Confirm Password</Label>
+                          <Input
+                            id="confirm-backup-password"
+                            type="password"
+                            placeholder="Re-enter password"
+                            value={confirmBackupPassword}
+                            onChange={(e) => setConfirmBackupPassword(e.target.value)}
+                            className="mt-1"
+                            data-testid="confirm-backup-password-input"
+                          />
+                        </div>
+
+                        <div className="text-xs text-destructive">
+                          ⚠️ Remember this password! If you lose it, your backup cannot be recovered.
+                        </div>
+                      </div>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel 
+                      onClick={() => {
+                        setBackupPassword('');
+                        setConfirmBackupPassword('');
+                      }}
+                      data-testid="cancel-backup-button"
+                    >
+                      Cancel
+                    </AlertDialogCancel>
+                    <Button
+                      onClick={handleCreateBackup}
+                      disabled={isCreatingBackup || backupPassword.length < 12 || backupPassword !== confirmBackupPassword}
+                      data-testid="confirm-backup-button"
+                    >
+                      {isCreatingBackup ? 'Creating Backup...' : 'Create Backup'}
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleListBackups}
+                data-testid="restore-backup-button"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Restore from Backup
+              </Button>
+            </div>
+
+            {/* Restore Dialog */}
+            <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+              <AlertDialogContent className="bg-card max-w-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Restore from Backup</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-4 pt-4">
+                    {backupList.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Cloud className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                        <p>No backups found</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <Label>Select Backup:</Label>
+                        <div className="max-h-48 overflow-y-auto space-y-2">
+                          {backupList.map((backup) => (
+                            <div
+                              key={backup.id}
+                              onClick={() => setSelectedBackup(backup)}
+                              className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                                selectedBackup?.id === backup.id
+                                  ? 'bg-primary/10 border-primary'
+                                  : 'bg-muted border-border hover:bg-accent'
+                              }`}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <p className="text-sm font-medium">{backup.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(backup.createdTime).toLocaleString()}
+                                  </p>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  {(backup.size / 1024).toFixed(2)} KB
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {selectedBackup && (
+                          <div>
+                            <Label htmlFor="restore-password">Enter Backup Password</Label>
+                            <Input
+                              id="restore-password"
+                              type="password"
+                              placeholder="Your backup password"
+                              value={restorePassword}
+                              onChange={(e) => setRestorePassword(e.target.value)}
+                              className="mt-1"
+                              data-testid="restore-password-input"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel onClick={() => {
+                    setRestorePassword('');
+                    setSelectedBackup(null);
+                  }}>
+                    Cancel
+                  </AlertDialogCancel>
+                  {backupList.length > 0 && (
+                    <Button
+                      onClick={handleRestoreBackup}
+                      disabled={isRestoringBackup || !selectedBackup || !restorePassword}
+                      data-testid="confirm-restore-button"
+                    >
+                      {isRestoringBackup ? 'Restoring...' : 'Restore Backup'}
+                    </Button>
+                  )}
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
 
           {/* Danger Zone */}
