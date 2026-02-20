@@ -44,7 +44,7 @@ const Dashboard = () => {
   }, [token]);
 
   const setupScreenshotDetection = () => {
-    screenshotDetector.current = new EnhancedScreenshotDetector(async (data) => {
+    screenshotDetector.current = new WorkingScreenshotDetector(async (data) => {
       // Log to audit trail
       try {
         await axios.post(
