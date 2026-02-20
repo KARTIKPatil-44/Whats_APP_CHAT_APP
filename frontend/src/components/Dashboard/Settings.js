@@ -21,7 +21,7 @@ import {
   Cloud, Download, Upload, Lock
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { backupManager } from '../../utils/backup';
+import { backupManager } from '../../utils/backup-simple';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -50,21 +50,21 @@ const Settings = ({ onBack }) => {
 
   const loadGoogleAPI = () => {
     // Check if script already loaded
-    if (window.gapi) {
-      console.log('Google API already loaded');
+    if (window.google && window.google.accounts) {
+      console.log('Google Identity Services already loaded');
       return;
     }
 
-    // Load Google API script
+    // Load Google Identity Services (new OAuth library)
     const script = document.createElement('script');
-    script.src = 'https://apis.google.com/js/api.js';
+    script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = () => {
-      console.log('Google API script loaded successfully');
+      console.log('Google Identity Services loaded successfully');
     };
     script.onerror = () => {
-      console.error('Failed to load Google API script');
+      console.error('Failed to load Google Identity Services');
       toast.error('Failed to load Google Drive integration');
     };
     document.head.appendChild(script);
@@ -84,13 +84,10 @@ const Settings = ({ onBack }) => {
     setIsCreatingBackup(true);
 
     try {
-      await backupManager.initGoogleDrive();
-      await backupManager.authenticateGoogle();
-      
       const result = await backupManager.createBackup(backupPassword, user.id);
       
       toast.success('Backup created successfully!', {
-        description: `Encrypted backup uploaded to Google Drive`,
+        description: `File: ${result.name}`,
         icon: <Cloud className="w-4 h-4" />
       });
       
@@ -109,15 +106,14 @@ const Settings = ({ onBack }) => {
 
   const handleListBackups = async () => {
     try {
-      await backupManager.initGoogleDrive();
-      await backupManager.authenticateGoogle();
-      
       const backups = await backupManager.listBackups();
       setBackupList(backups);
       setShowRestoreDialog(true);
     } catch (error) {
       console.error('Failed to list backups:', error);
-      toast.error('Failed to load backups');
+      toast.error('Failed to load backups', {
+        description: error.message
+      });
     }
   };
 
