@@ -2,9 +2,9 @@ import React from 'react';
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
-import { Search, FileText, LogOut, ShieldCheck, User } from 'lucide-react';
+import { Search, FileText, LogOut, ShieldCheck, User, Settings as SettingsIcon } from 'lucide-react';
 
-const Sidebar = ({ contacts, activeChat, onSelectContact, onShowSearch, onShowAuditLogs, onLogout, user }) => {
+const Sidebar = ({ contacts, activeChat, onSelectContact, onShowSearch, onShowAuditLogs, onShowSettings, onLogout, user }) => {
   const getInitials = (name) => {
     return name?.split(' ').map(n => n[0]).join('').toUpperCase() || '??';
   };
@@ -26,15 +26,26 @@ const Sidebar = ({ contacts, activeChat, onSelectContact, onShowSearch, onShowAu
             </div>
           </div>
           
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onLogout}
-            data-testid="logout-button"
-            aria-label="Logout"
-          >
-            <LogOut className="w-4 h-4" />
-          </Button>
+          <div className="flex gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onShowSettings}
+              data-testid="settings-button"
+              aria-label="Settings"
+            >
+              <SettingsIcon className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onLogout}
+              data-testid="logout-button"
+              aria-label="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex gap-2">
