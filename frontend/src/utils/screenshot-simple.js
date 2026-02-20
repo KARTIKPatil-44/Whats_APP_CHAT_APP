@@ -13,29 +13,46 @@ function createWarningBanner() {
       bottom: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(90deg, rgba(239,68,68,0.1) 0%, rgba(251,146,60,0.1) 100%);
-      border-top: 2px solid rgba(239, 68, 68, 0.4);
-      padding: 12px 20px;
-      z-index: 99999;
+      background: linear-gradient(90deg, rgba(239,68,68,0.08) 0%, rgba(251,146,60,0.08) 100%);
+      border-top: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 8px 20px;
+      z-index: 10000;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 12px;
+      gap: 10px;
       font-family: 'Inter', -apple-system, sans-serif;
-      font-size: 13px;
+      font-size: 12px;
       font-weight: 500;
       color: #ef4444;
       backdrop-filter: blur(10px);
-      box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+      box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
     ">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
       </svg>
-      <span>\ud83d\udd12 Encrypted Chat - Screenshots are monitored and logged</span>
+      <span>\ud83d\udd12 Encrypted - Screenshots monitored</span>
     </div>
   `;
   document.body.appendChild(banner);
+  
+  // Add bottom padding to main content to prevent overlap
+  const style = document.createElement('style');
+  style.id = 'screenshot-banner-padding';
+  style.textContent = `
+    body {
+      padding-bottom: 36px !important;
+    }
+    
+    /* Ensure chat input is not hidden */
+    .chat-content,
+    [data-testid="chat-dashboard"] {
+      padding-bottom: 40px !important;
+    }
+  `;
+  document.head.appendChild(style);
+  
   return banner;
 }
 
