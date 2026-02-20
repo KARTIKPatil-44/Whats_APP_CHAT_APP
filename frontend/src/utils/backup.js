@@ -8,10 +8,10 @@ import { cryptoManager } from './crypto';
 
 class BackupManager {
   constructor() {
-    this.CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID';
-    this.API_KEY = process.env.REACT_APP_GOOGLE_API_KEY || 'YOUR_GOOGLE_API_KEY';
+    this.CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID;
     this.SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
     this.DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
+    this.gapiLoaded = false;
   }
 
   /**
@@ -19,20 +19,30 @@ class BackupManager {
    */
   async initGoogleDrive() {
     return new Promise((resolve, reject) => {
-      if (window.gapi) {
-        window.gapi.load('client:auth2', () => {
-          window.gapi.client.init({
-            apiKey: this.API_KEY,
-            clientId: this.CLIENT_ID,
-            discoveryDocs: this.DISCOVERY_DOCS,
-            scope: this.SCOPES
-          }).then(() => {
-            resolve(window.gapi.client);
-          }).catch(reject);
-        });
-      } else {
-        reject(new Error('Google API not loaded'));
+      if (!window.gapi) {
+        reject(new Error('Google API not loaded. Please refresh the page.'));
+        return;
       }
+
+      if (this.gapiLoaded) {
+        resolve(window.gapi.client);
+        return;
+      }
+
+      window.gapi.load('client:auth2', () => {
+        window.gapi.client.init({
+          clientId: this.CLIENT_ID,
+          discoveryDocs: this.DISCOVERY_DOCS,
+          scope: this.SCOPES
+        }).then(() => {
+          this.gapiLoaded = true;
+          console.log('Google Drive API initialized');
+          resolve(window.gapi.client);
+        }).catch((error) => {
+          console.error('Failed to initialize Google Drive:', error);
+          reject(error);
+        });
+      });
     });
   }
 
