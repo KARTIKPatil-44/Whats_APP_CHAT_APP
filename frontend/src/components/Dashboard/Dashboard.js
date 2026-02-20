@@ -270,7 +270,7 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background" data-testid="chat-dashboard">
+    <div className="flex h-full overflow-hidden bg-background" data-testid="chat-dashboard">
       <Sidebar
         contacts={contacts}
         activeChat={activeChat}
