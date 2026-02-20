@@ -13,9 +13,9 @@ function createWarningBanner() {
       bottom: 0;
       left: 0;
       right: 0;
-      background: rgba(239, 68, 68, 0.06);
-      border-top: 1px solid rgba(239, 68, 68, 0.2);
-      padding: 6px 16px;
+      background: rgba(9, 9, 11, 0.95);
+      border-top: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 8px 16px;
       z-index: 9999;
       display: flex;
       align-items: center;
@@ -25,34 +25,38 @@ function createWarningBanner() {
       font-size: 11px;
       font-weight: 500;
       color: #dc2626;
-      backdrop-filter: blur(8px);
+      backdrop-filter: blur(12px);
+      height: 36px;
+      box-sizing: border-box;
     ">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
       </svg>
-      <span>\ud83d\udd12 Screenshots monitored</span>
+      <span>Encrypted Chat - Screenshots monitored</span>
     </div>
   `;
   document.body.appendChild(banner);
   
-  // Add bottom padding to prevent overlap with chat input
+  // Add styles to properly offset the entire app layout
   const style = document.createElement('style');
   style.id = 'screenshot-banner-styles';
   style.textContent = `
-    /* Add padding to main app container */
+    /* Push entire app content up to make room for banner */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    
     #root {
-      padding-bottom: 30px !important;
+      height: calc(100% - 36px) !important;
+      overflow: hidden;
     }
     
-    /* Ensure chat dashboard has proper spacing */
+    /* Ensure chat dashboard uses available space */
     [data-testid="chat-dashboard"] {
-      padding-bottom: 32px !important;
-    }
-    
-    /* Adjust chat window to not overlap */
-    .flex.h-screen {
-      height: calc(100vh - 30px) !important;
+      height: 100% !important;
+      max-height: 100% !important;
     }
   `;
   document.head.appendChild(style);
