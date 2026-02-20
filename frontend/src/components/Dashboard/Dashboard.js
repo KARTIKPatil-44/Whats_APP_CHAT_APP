@@ -4,7 +4,7 @@ import axios from 'axios';
 import { initializeSocket, getSocket, disconnectSocket } from '../../utils/socket';
 import { cryptoManager } from '../../utils/crypto';
 import { storage } from '../../utils/storage';
-import EnhancedScreenshotDetector from '../../utils/screenshot-detector-enhanced';
+import WorkingScreenshotDetector from '../../utils/screenshot-working';
 import Sidebar from './Sidebar';
 import ChatWindow from './ChatWindow';
 import UserSearch from './UserSearch';
