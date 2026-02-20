@@ -49,12 +49,25 @@ const Settings = ({ onBack }) => {
   }, []);
 
   const loadGoogleAPI = () => {
+    // Check if script already loaded
+    if (window.gapi) {
+      console.log('Google API already loaded');
+      return;
+    }
+
+    // Load Google API script
     const script = document.createElement('script');
     script.src = 'https://apis.google.com/js/api.js';
+    script.async = true;
+    script.defer = true;
     script.onload = () => {
-      console.log('Google API loaded');
+      console.log('Google API script loaded successfully');
     };
-    document.body.appendChild(script);
+    script.onerror = () => {
+      console.error('Failed to load Google API script');
+      toast.error('Failed to load Google Drive integration');
+    };
+    document.head.appendChild(script);
   };
 
   const handleCreateBackup = async () => {
