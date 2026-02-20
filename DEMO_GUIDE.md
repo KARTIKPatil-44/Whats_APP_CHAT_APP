@@ -3,7 +3,7 @@
 ## 📍 Access URLs
 
 **Frontend:** `http://localhost:3000`  
-**Backend API:** `https://cryptomsg-platform.preview.emergentagent.com/api`
+**Backend API:** `https://encrypted-messaging-7.preview.emergentagent.com/api`
 
 ---
 
@@ -244,7 +244,7 @@
 ## 🧪 Quick API Test (Without UI)
 
 ```bash
-API_URL="https://cryptomsg-platform.preview.emergentagent.com/api"
+API_URL="https://encrypted-messaging-7.preview.emergentagent.com/api"
 
 # Test 1: Health check
 curl -X GET "$API_URL/"

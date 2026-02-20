@@ -27,7 +27,7 @@ Add these URLs to **"Authorized JavaScript origins"**:
 
 ```
 http://localhost:3000
-https://job-1202c580-8120-4027-b33f-4f35c79441ad.preview.emergentagent.com
+https://encrypted-messaging-7.preview.emergentagent.com
 ```
 
 ---
@@ -39,8 +39,8 @@ Add these URLs to **"Authorized redirect URIs"**:
 ```
 http://localhost:3000
 http://localhost:3000/
-https://job-1202c580-8120-4027-b33f-4f35c79441ad.preview.emergentagent.com
-https://job-1202c580-8120-4027-b33f-4f35c79441ad.preview.emergentagent.com/
+https://encrypted-messaging-7.preview.emergentagent.com
+https://encrypted-messaging-7.preview.emergentagent.com/
 ```
 
 ---

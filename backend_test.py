@@ -8,7 +8,7 @@ import time
 import uuid
 
 class SecureChatAPITester:
-    def __init__(self, base_url="https://cryptomsg-platform.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://encrypted-messaging-7.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.user_id = None
