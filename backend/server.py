@@ -134,6 +134,11 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     
     return User(**user)
 
+# Root route
+@api_router.get("/")
+async def api_root():
+    return {"message": "SecureChat API", "version": "1.0.0", "status": "operational"}
+
 # Auth routes
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
