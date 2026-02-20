@@ -13,42 +13,46 @@ function createWarningBanner() {
       bottom: 0;
       left: 0;
       right: 0;
-      background: linear-gradient(90deg, rgba(239,68,68,0.08) 0%, rgba(251,146,60,0.08) 100%);
-      border-top: 1px solid rgba(239, 68, 68, 0.3);
-      padding: 8px 20px;
-      z-index: 10000;
+      background: rgba(239, 68, 68, 0.06);
+      border-top: 1px solid rgba(239, 68, 68, 0.2);
+      padding: 6px 16px;
+      z-index: 9999;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
       font-family: 'Inter', -apple-system, sans-serif;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 500;
-      color: #ef4444;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      color: #dc2626;
+      backdrop-filter: blur(8px);
     ">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
         <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
       </svg>
-      <span>\ud83d\udd12 Encrypted - Screenshots monitored</span>
+      <span>\ud83d\udd12 Screenshots monitored</span>
     </div>
   `;
   document.body.appendChild(banner);
   
-  // Add bottom padding to main content to prevent overlap
+  // Add bottom padding to prevent overlap with chat input
   const style = document.createElement('style');
-  style.id = 'screenshot-banner-padding';
+  style.id = 'screenshot-banner-styles';
   style.textContent = `
-    body {
-      padding-bottom: 36px !important;
+    /* Add padding to main app container */
+    #root {
+      padding-bottom: 30px !important;
     }
     
-    /* Ensure chat input is not hidden */
-    .chat-content,
+    /* Ensure chat dashboard has proper spacing */
     [data-testid="chat-dashboard"] {
-      padding-bottom: 40px !important;
+      padding-bottom: 32px !important;
+    }
+    
+    /* Adjust chat window to not overlap */
+    .flex.h-screen {
+      height: calc(100vh - 30px) !important;
     }
   `;
   document.head.appendChild(style);
