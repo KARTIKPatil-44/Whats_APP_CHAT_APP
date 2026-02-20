@@ -1,0 +1,22 @@
+{
+  "summary": {
+    "total_tests": 15,
+    "passed_tests": 14,
+    "success_rate": 93.33333333333333,
+    "timestamp": "2026-02-20T09:39:03.153960"
+  },
+  "test_results": [
+    {
+      "test_name": "Unauthorized Access (should fail)",
+      "method": "GET",
+      "endpoint": "contacts",
+      "expected_status": 401,
+      "actual_status": 403,
+      "success": false,
+      "timestamp": "2026-02-20T09:39:03.152981",
+      "error_data": {
+        "detail": "Not authenticated"
+      }
+    }
+  ]
+}
