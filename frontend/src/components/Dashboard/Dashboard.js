@@ -9,6 +9,7 @@ import Sidebar from './Sidebar';
 import ChatWindow from './ChatWindow';
 import UserSearch from './UserSearch';
 import AuditLogs from './AuditLogs';
+import Settings from './Settings';
 import { toast } from 'sonner';
 import { AlertTriangle } from 'lucide-react';
 
@@ -23,6 +24,7 @@ const Dashboard = () => {
   const [sharedKeys, setSharedKeys] = useState({});
   const [showSearch, setShowSearch] = useState(false);
   const [showAuditLogs, setShowAuditLogs] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const screenshotDetector = useRef(null);
 
   useEffect(() => {
@@ -250,6 +252,10 @@ const Dashboard = () => {
     }
   };
 
+  if (showSettings) {
+    return <Settings onBack={() => setShowSettings(false)} />;
+  }
+
   if (showAuditLogs) {
     return <AuditLogs onBack={() => setShowAuditLogs(false)} />;
   }
@@ -271,6 +277,7 @@ const Dashboard = () => {
         onSelectContact={handleSelectContact}
         onShowSearch={() => setShowSearch(true)}
         onShowAuditLogs={() => setShowAuditLogs(true)}
+        onShowSettings={() => setShowSettings(true)}
         onLogout={logout}
         user={user}
       />
