@@ -4,7 +4,7 @@ import axios from 'axios';
 import { initializeSocket, getSocket, disconnectSocket } from '../../utils/socket';
 import { cryptoManager } from '../../utils/crypto';
 import { storage } from '../../utils/storage';
-import WorkingScreenshotDetector from '../../utils/screenshot-working';
+import SimpleScreenshotDetector from '../../utils/screenshot-simple';
 import Sidebar from './Sidebar';
 import ChatWindow from './ChatWindow';
 import UserSearch from './UserSearch';
@@ -44,7 +44,7 @@ const Dashboard = () => {
   }, [token]);
 
   const setupScreenshotDetection = () => {
-    screenshotDetector.current = new WorkingScreenshotDetector(async (data) => {
+    screenshotDetector.current = new SimpleScreenshotDetector(async (data) => {
       // Log to audit trail
       try {
         await axios.post(
